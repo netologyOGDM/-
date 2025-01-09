@@ -57,5 +57,41 @@ json-файл с информацией по файлу:
 
 Нет смысла использовать get, а потом put, если есть сразу готовое решение через метод post
 
+Доработка замечаний №2
 
+В данной части кода
+    vk_token = config['VK']['token']
+    yandex_token = config['Yandex']['token']
+вы достаете токены, но нейминг немного не сходится с тем, что у вас указано в файле settings.ini, из-за чего возникает ошибка
 
+Данную функцию
+
+def upload_photos_to_yandex(results, yandex_disk):
+    for likes_count, data in results.items():
+        file_name = f"{likes_count}.jpg"
+        response = requests.get(data['url'])
+
+        if response.status_code == 200:
+            with open(file_name, 'wb') as file:
+                file.write(response.content)
+            yandex_disk.upload_file(file_name, file_name)
+            os.remove(file_name)
+необходимо доработать, а именно:
+
+Зачем получать данные файла и потом записывать их в файл локально? это часть здесь лишняя. Локально мы ничего не сохраняем да и данные получать нет смысла, т.к. мы сразу загружаем по ссылке.
+метод upload_file принимает три аргумента, но передается только два и причем одинаковых.
+Данный метод
+
+    def upload_file(self, file_path, folder_name, file_name):
+        upload_url = f'{self.base_url}?path={quote(f"{folder_name}/{file_name}")}&overwrite=true'
+        headers = {'Authorization': f'OAuth {self.token}'}
+        response = requests.post(upload_url, headers=headers)
+        if response.status_code == 201:
+            with open(file_path, 'rb') as file:
+                requests.put(response.json()['href'], files={'file': file})
+        else:
+            print(f"Ошибка при получении URL загрузки: {response.json()}")
+необходимо доработать, а именно:
+
+Путь можно сразу формировать на основе папки
+Не совсем понятно зачем здесь put, если ранее загрузили через post
